@@ -3,9 +3,25 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+
     <title>Spelling Bee</title>
     <link rel="stylesheet" href="styles.css">
+
+    <style>
+        /* Prevent text selection and callouts */
+        * {
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Allow text selection in input fields and found words */
+        input,
+        .words-list span {
+            -webkit-user-select: text;
+        }
+    </style>
 </head>
 
 <body>
@@ -129,7 +145,7 @@
                     </div>
                     <div class="stat-box">
                         <div class="stat-number" id="stats-win-rate">0%</div>
-                        <div class="stat-label">Win Rate</div>
+                        <div class="stat-label">Queen Bee Rate</div>
                     </div>
                     <div class="stat-box">
                         <div class="stat-number" id="stats-current-streak">0</div>

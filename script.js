@@ -494,7 +494,7 @@ class SpellingBee {
     loadStats() {
         const defaultStats = {
             played: 0,
-            wins: 0,
+            queenBees: 0,
             currentStreak: 0,
             maxStreak: 0,
             rankDistribution: {
@@ -509,11 +509,27 @@ class SpellingBee {
                 'GENIUS': 0,
                 'QUEEN BEE': 0
             },
-            lastPlayed: null
+            lastPlayed: null,
+            lastRank: null
         };
 
         const savedStats = localStorage.getItem('spellingBeeStats');
-        return savedStats ? JSON.parse(savedStats) : defaultStats;
+        if (!savedStats) return defaultStats;
+
+        const stats = JSON.parse(savedStats);
+
+        // Handle old format stats
+        if (!stats.hasOwnProperty('lastRank')) {
+            stats.lastRank = null;
+            // Convert wins to queenBees if present
+            if (stats.hasOwnProperty('wins')) {
+                stats.queenBees = stats.wins;
+                delete stats.wins;
+            }
+        }
+
+        // Ensure all properties exist
+        return { ...defaultStats, ...stats };
     }
 
     saveStats() {
@@ -522,24 +538,40 @@ class SpellingBee {
 
     updateStats() {
         const today = new Date().toISOString().split('T')[0];
-
-        // Only update stats once per day
-        if (this.stats.lastPlayed === today) return;
-
-        this.stats.played++;
-        this.stats.lastPlayed = today;
-
-        // Update rank distribution
         const currentRank = this.rankDisplay.textContent;
-        this.stats.rankDistribution[currentRank] = (this.stats.rankDistribution[currentRank] || 0) + 1;
 
-        // Update streaks
-        if (this.score > 0) {
-            this.stats.wins++;
-            this.stats.currentStreak++;
-            this.stats.maxStreak = Math.max(this.stats.maxStreak, this.stats.currentStreak);
-        } else {
-            this.stats.currentStreak = 0;
+        // Update played count and last played date only if it's a new day
+        if (this.stats.lastPlayed !== today) {
+            this.stats.played++;
+            this.stats.lastPlayed = today;
+            this.stats.lastRank = null; // Reset last rank for new day
+        }
+
+        // Only update rank distribution if we've reached a higher rank
+        if (currentRank !== this.stats.lastRank) {
+            // Get rank index from RANKS object
+            const rankEntries = Object.entries(RANKS);
+            const currentRankIndex = rankEntries.findIndex(([rank]) => rank.replace('_', ' ') === currentRank);
+            const lastRankIndex = this.stats.lastRank ?
+                rankEntries.findIndex(([rank]) => rank.replace('_', ' ') === this.stats.lastRank) : -1;
+
+            // Only update if we've reached a higher rank
+            if (currentRankIndex > lastRankIndex) {
+                // Remove the count from the previous rank if it exists
+                if (this.stats.lastRank) {
+                    this.stats.rankDistribution[this.stats.lastRank]--;
+                }
+                // Add to the new rank
+                this.stats.rankDistribution[currentRank] = (this.stats.rankDistribution[currentRank] || 0) + 1;
+                this.stats.lastRank = currentRank;
+
+                // Update Queen Bee count and streak
+                if (currentRank === 'QUEEN BEE') {
+                    this.stats.queenBees++;
+                    this.stats.currentStreak++;
+                    this.stats.maxStreak = Math.max(this.stats.maxStreak, this.stats.currentStreak);
+                }
+            }
         }
 
         this.saveStats();
@@ -552,7 +584,7 @@ class SpellingBee {
         document.getElementById('stats-played').textContent = this.stats.played;
         document.getElementById('stats-win-rate').textContent =
             this.stats.played > 0
-                ? Math.round((this.stats.wins / this.stats.played) * 100) + '%'
+                ? Math.round((this.stats.queenBees / this.stats.played) * 100) + '%'
                 : '0%';
         document.getElementById('stats-current-streak').textContent = this.stats.currentStreak;
         document.getElementById('stats-max-streak').textContent = this.stats.maxStreak;
