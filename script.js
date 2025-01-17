@@ -1,15 +1,15 @@
 // Game configuration
 const RANKS = {
     BEGINNER: 0,
-    GOOD_START: 4,
-    MOVING_UP: 11,
-    GOOD: 18,
-    SOLID: 33,
-    NICE: 56,
-    GREAT: 89,
-    AMAZING: 111,
-    GENIUS: 155,
-    QUEEN_BEE: 222
+    GOOD_START: 6,
+    MOVING_UP: 14,
+    GOOD: 22,
+    SOLID: 42,
+    NICE: 70,
+    GREAT: 112,
+    AMAZING: 140,
+    GENIUS: 195,
+    QUEEN_BEE: 279
 };
 
 class SpellingBee {
@@ -30,6 +30,8 @@ class SpellingBee {
         this.mobileWordsList = document.getElementById('mobile-words-list');
         this.mobileOverlay = document.querySelector('.mobile-overlay');
         this.wordsCountDesktop = document.getElementById('words-count-desktop');
+        this.wordDropdown = document.querySelector('.word-dropdown');
+        this.wordDropdownList = document.querySelector('.word-list');
 
         // Buttons
         document.getElementById('delete-btn').addEventListener('click', () => this.deleteLetter());
@@ -37,7 +39,7 @@ class SpellingBee {
         document.getElementById('enter-btn').addEventListener('click', () => this.submitWord());
         document.getElementById('share-btn').addEventListener('click', () => this.shareProgress());
         document.getElementById('how-to-play').addEventListener('click', () => this.showRules());
-        document.getElementById('words-btn').addEventListener('click', () => this.toggleMobileWords());
+        document.getElementById('words-btn').addEventListener('click', () => this.toggleFoundWords());
         document.querySelector('.close-words').addEventListener('click', () => this.toggleMobileWords());
 
         // Close mobile overlay when clicking outside
@@ -159,11 +161,13 @@ class SpellingBee {
     addLetter(letter) {
         this.currentWord += letter;
         this.currentWordDisplay.textContent = this.currentWord;
+        this.updateWordDropdown();
     }
 
     deleteLetter() {
         this.currentWord = this.currentWord.slice(0, -1);
         this.currentWordDisplay.textContent = this.currentWord;
+        this.updateWordDropdown();
     }
 
     shuffleLetters() {
@@ -188,32 +192,40 @@ class SpellingBee {
     submitWord() {
         const word = this.currentWord.toUpperCase();
 
+        const clearAndShowMessage = (message) => {
+            this.showMessage(message);
+            this.currentWord = '';
+            this.currentWordDisplay.textContent = '';
+            this.wordDropdown.classList.remove('show');
+        };
+
         if (word.length < 4) {
-            this.showMessage('Words must be at least 4 letters long');
+            clearAndShowMessage('Words must be at least 4 letters long');
             return;
         }
 
         if (!word.includes(this.centerLetter)) {
-            this.showMessage('Word must contain center letter');
+            clearAndShowMessage('Word must contain center letter');
             return;
         }
 
         if (this.foundWords.has(word)) {
-            this.showMessage('Word already found');
+            clearAndShowMessage('Word already found');
             return;
         }
 
         // Check if word only contains valid letters
         const validLetters = new Set([...this.letters, this.centerLetter]);
         if (![...word].every(letter => validLetters.has(letter))) {
-            this.showMessage('Invalid letters used');
+            clearAndShowMessage('Invalid letters used');
             return;
         }
 
-        if (!this.dictionary.has(word)) {
-            this.showMessage('Not in word list');
-            return;
-        }
+        // Dictionary check disabled for debugging
+        // if (!this.dictionary.has(word)) {
+        //     clearAndShowMessage('Not in word list');
+        //     return;
+        // }
 
         // Word is valid
         this.foundWords.add(word);
@@ -222,23 +234,29 @@ class SpellingBee {
         this.currentWord = '';
         this.currentWordDisplay.textContent = '';
 
-        // Check if it's a pangram
-        const uniqueLetters = new Set([...word]);
-        if (uniqueLetters.size === 7) {
-            this.showMessage('🎉 Pangram! +7 points', true);
-        }
 
         this.saveGameState();
     }
 
     updateScore(word) {
-        // Calculate points
-        let points = word.length >= 4 ? Math.max(1, word.length) : 0;
+        // Calculate base points based on word length
+        let points = 0;
+        switch (word.length) {
+            case 4:
+                points = 1;
+                break;
+            default:
+                points = word.length; // 5 points for 5 letters, 6 for 6, etc.
+                break;
+        }
 
-        // Check for pangram
+        // Check for pangram (uses all 7 letters)
         const uniqueLetters = new Set([...word]);
         if (uniqueLetters.size === 7) {
-            points += 7;
+            points += 7; // Bonus points for pangram
+            this.showMessage(`🎉 Pangram! +${points} points (${points - 7} + 7 bonus)`, true);
+        } else if (word.length >= 7) {
+            this.showMessage(`Nice! +${points} points`, false);
         }
 
         this.score += points;
@@ -248,12 +266,117 @@ class SpellingBee {
 
     updateRank() {
         let currentRank = 'BEGINNER';
-        for (const [rank, threshold] of Object.entries(RANKS)) {
+        let progress = 0;
+        const rankEntries = Object.entries(RANKS);
+
+        // Find current rank and calculate progress
+        for (let i = 0; i < rankEntries.length; i++) {
+            const [rank, threshold] = rankEntries[i];
+            const nextThreshold = rankEntries[i + 1]?.[1] || threshold;
+
             if (this.score >= threshold) {
                 currentRank = rank.replace('_', ' ');
+                // Calculate progress to next rank (0-4)
+                if (i < rankEntries.length - 1) {
+                    const range = nextThreshold - threshold;
+                    const scoreInRange = this.score - threshold;
+                    progress = Math.min(4, Math.floor((scoreInRange / range) * 5));
+                } else {
+                    progress = 4; // Max progress if at highest rank
+                }
             }
         }
+
+        // Update rank display
         this.rankDisplay.textContent = currentRank;
+
+        // Update progress dots
+        const dots = document.querySelectorAll('.dot');
+        dots.forEach((dot, index) => {
+            dot.classList.toggle('active', index <= progress);
+        });
+    }
+
+    toggleFoundWords() {
+        const dropdown = document.querySelector('.word-dropdown');
+        const wordList = document.querySelector('.word-list');
+
+        // Hide any other dropdowns
+        this.wordDropdown.classList.remove('show');
+
+        if (!dropdown.classList.contains('show')) {
+            // Position dropdown below the word count button
+            const wordsBtn = document.getElementById('words-btn');
+            const rect = wordsBtn.getBoundingClientRect();
+            dropdown.style.position = 'fixed';
+            dropdown.style.top = `${rect.bottom + 5}px`;
+            dropdown.style.left = `${rect.left}px`;
+            dropdown.style.width = `${rect.width}px`;
+            dropdown.style.maxHeight = '300px';
+
+            // Update list with found words
+            wordList.innerHTML = '';
+            const sortedWords = Array.from(this.foundWords).sort();
+            sortedWords.forEach(word => {
+                const span = document.createElement('span');
+                span.textContent = word;
+                if (new Set([...word]).size === 7) {
+                    span.classList.add('pangram');
+                }
+                wordList.appendChild(span);
+            });
+
+            // Close dropdown when clicking outside
+            const closeDropdown = (e) => {
+                if (!dropdown.contains(e.target) && e.target !== wordsBtn) {
+                    dropdown.classList.remove('show');
+                    document.removeEventListener('click', closeDropdown);
+                }
+            };
+            setTimeout(() => document.addEventListener('click', closeDropdown), 0);
+        }
+
+        dropdown.classList.toggle('show');
+    }
+
+    updateWordDropdown() {
+        if (this.currentWord.length < 1) {
+            this.wordDropdown.classList.remove('show');
+            return;
+        }
+
+        const currentLetters = new Set([...this.currentWord.toUpperCase()]);
+        const possibleWords = Array.from(this.dictionary)
+            .filter(word =>
+                word.startsWith(this.currentWord.toUpperCase()) &&
+                !this.foundWords.has(word) &&
+                word.includes(this.centerLetter) &&
+                [...word].every(letter => this.letters.includes(letter) || letter === this.centerLetter)
+            )
+            .sort((a, b) => a.length - b.length);
+
+        if (possibleWords.length === 0) {
+            this.wordDropdown.classList.remove('show');
+            return;
+        }
+
+        this.wordDropdownList.innerHTML = '';
+        possibleWords.forEach(word => {
+            const span = document.createElement('span');
+            span.textContent = word;
+            if (new Set([...word]).size === 7) {
+                span.classList.add('pangram');
+            }
+            span.addEventListener('click', () => {
+                this.currentWord = word;
+                this.currentWordDisplay.textContent = word;
+                this.submitWord();
+                this.wordDropdown.classList.remove('show');
+            });
+            this.wordDropdownList.appendChild(span);
+        });
+
+        this.wordDropdown.classList.add('show');
     }
 
     displayWord(word) {
@@ -276,6 +399,9 @@ class SpellingBee {
         const count = this.foundWords.size;
         document.getElementById('word-count').textContent = count;
         this.wordsCountDesktop.textContent = count;
+
+        // Hide dropdown after word is added
+        this.wordDropdown.classList.remove('show');
     }
 
     showMessage(message, isPangram = false) {
@@ -315,10 +441,25 @@ class SpellingBee {
             • Each word must contain the center letter
             • Words must be 4 letters or longer
             • Letters can be reused
-            • Scoring:
-              - 4 letters = 1 point
-              - 5+ letters = 1 point per letter
-              - Using all 7 letters = 7 bonus points
+
+            Scoring:
+            • 4-letter words: 1 point each
+            • 5-letter words: 5 points each
+            • 6-letter words: 6 points each
+            • 7-letter words: 7 points each
+            • Pangrams (using all 7 letters): +7 bonus points
+
+            Ranks:
+            • Beginner: 0
+            • Good Start: 6
+            • Moving Up: 14
+            • Good: 22
+            • Solid: 42
+            • Nice: 70
+            • Great: 112
+            • Amazing: 140
+            • Genius: 195
+            • Queen Bee: 279
         `;
     }
 
