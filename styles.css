@@ -76,25 +76,46 @@ body {
 .header-content {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     margin-bottom: 15px;
 }
 
-.theme-toggle {
+.header-buttons {
+    display: flex;
+    gap: 8px;
+    min-width: 80px;
+    /* Ensure equal space on both sides */
+}
+
+.header-buttons.left {
+    justify-content: flex-start;
+}
+
+.header-buttons.right {
+    justify-content: flex-end;
+}
+
+.icon-button {
     background: none;
     border: none;
     padding: 8px;
     cursor: pointer;
     color: var(--text-color);
+    border-radius: 50%;
+    transition: background-color 0.2s;
 }
 
-.theme-toggle svg {
+.icon-button:hover {
+    background: var(--button-hover-bg);
+}
+
+.icon-button svg {
     width: 24px;
     height: 24px;
     transition: transform 0.3s ease;
 }
 
-.theme-toggle .moon-icon {
+.icon-button .moon-icon {
     display: none;
 }
 
@@ -109,6 +130,7 @@ body {
 .rank-progress {
     text-align: center;
     flex: 1;
+    margin: 0 15px;
 }
 
 .rank {
@@ -640,18 +662,6 @@ button:hover {
     font-size: 0.9em;
 }
 
-/* Game footer */
-.game-footer {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    padding: 15px 0;
-    margin-top: auto;
-}
-
-.game-footer button {
-    min-width: 120px;
-}
 
 /* Mobile styles */
 @media (max-width: 768px) {
@@ -747,20 +757,6 @@ button:hover {
         z-index: 1600;
     }
 
-    .game-footer {
-        position: fixed;
-        bottom: 80px;
-        left: 0;
-        right: 0;
-        padding: 10px;
-        background: var(--bg-color);
-        z-index: 1400;
-    }
-
-    .game-footer button {
-        min-width: 0;
-        flex: 1;
-    }
 
     .stats-grid {
         grid-template-columns: repeat(2, 1fr);
