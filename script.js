@@ -14,12 +14,18 @@ const RANKS = {
 
 class SpellingBee {
     constructor() {
+        // Initialize properties
         this.letters = [];
         this.centerLetter = '';
         this.foundWords = new Set();
         this.score = 0;
         this.currentWord = '';
         this.dictionary = new Set();
+        this.theme = localStorage.getItem('theme') || 'light';
+        this.stats = this.loadStats();
+
+        // Set theme
+        document.documentElement.setAttribute('data-theme', this.theme);
 
         // DOM elements
         this.cells = document.querySelectorAll('.cell');
@@ -40,7 +46,26 @@ class SpellingBee {
         document.getElementById('share-btn').addEventListener('click', () => this.shareProgress());
         document.getElementById('how-to-play').addEventListener('click', () => this.showRules());
         document.getElementById('words-btn').addEventListener('click', () => this.toggleFoundWords());
+        document.getElementById('stats-btn').addEventListener('click', () => this.showStats());
         document.querySelector('.close-words').addEventListener('click', () => this.toggleMobileWords());
+        document.getElementById('theme-toggle').addEventListener('click', () => this.toggleTheme());
+
+        // Close buttons for modals
+        document.querySelectorAll('.close').forEach(closeBtn => {
+            closeBtn.addEventListener('click', () => {
+                const modal = closeBtn.closest('.modal');
+                this.hideModal(modal);
+            });
+        });
+
+        // Click outside to close modals
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    this.hideModal(modal);
+                }
+            });
+        });
 
         // Close mobile overlay when clicking outside
         this.mobileOverlay.addEventListener('click', (e) => {
@@ -73,8 +98,15 @@ class SpellingBee {
 
         // Initialize game
         this.loadDictionary().then(() => {
-            this.initializeGame();
-            this.loadGameState();
+            // Check if already played today
+            const today = new Date().toISOString().split('T')[0];
+            const lastPlayed = localStorage.getItem('lastPlayed');
+
+            if (lastPlayed === today) {
+                this.loadGameState();
+            } else {
+                this.initializeGame();
+            }
         });
     }
 
@@ -104,6 +136,7 @@ class SpellingBee {
 
         // Display letters
         this.displayLetters();
+        this.saveGameState();
     }
 
     hashCode(str) {
@@ -117,31 +150,40 @@ class SpellingBee {
     }
 
     generateLetters(seed) {
-        // Simple letter generation based on seed
-        const vowels = 'AEIOU';
-        const consonants = 'BCDFGHJKLMNPQRSTVWXYZ';
-        const result = [];
+        // Use a more deterministic approach for daily puzzles
+        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const result = new Set();
+        let vowelCount = 0;
 
-        const random = (max) => {
+        // Seeded random function
+        const random = () => {
             seed = (seed * 9301 + 49297) % 233280;
-            return seed % max;
+            return seed / 233280;
         };
 
-        // Ensure at least 2 vowels
-        result.push(vowels[random(vowels.length)]);
-        result.push(vowels[random(vowels.length)]);
+        while (result.size < 7) {
+            const index = Math.floor(random() * letters.length);
+            const letter = letters[index];
 
-        // Add 5 more unique letters
-        while (result.length < 7) {
-            const letter = random(2) === 0
-                ? vowels[random(vowels.length)]
-                : consonants[random(consonants.length)];
-            if (!result.includes(letter)) {
-                result.push(letter);
+            // Ensure we have 2-3 vowels
+            if ('AEIOU'.includes(letter)) {
+                if (vowelCount >= 3) continue;
+                vowelCount++;
+            } else if (vowelCount < 2 && result.size >= 5) {
+                // If we're near the end and don't have enough vowels, skip consonants
+                continue;
             }
+
+            result.add(letter);
         }
 
-        return result;
+        return Array.from(result);
+    }
+
+    toggleTheme() {
+        this.theme = this.theme === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', this.theme);
+        localStorage.setItem('theme', this.theme);
     }
 
     displayLetters() {
@@ -234,11 +276,13 @@ class SpellingBee {
         this.currentWord = '';
         this.currentWordDisplay.textContent = '';
 
-
         this.saveGameState();
     }
 
     updateScore(word) {
+        const previousScore = this.score;
+        const previousRank = this.rankDisplay.textContent;
+
         // Calculate base points based on word length
         let points = 0;
         switch (word.length) {
@@ -261,10 +305,10 @@ class SpellingBee {
 
         this.score += points;
         this.scoreDisplay.textContent = this.score;
-        this.updateRank();
+        this.updateRank(previousRank);
     }
 
-    updateRank() {
+    updateRank(previousRank) {
         let currentRank = 'BEGINNER';
         let progress = 0;
         const rankEntries = Object.entries(RANKS);
@@ -295,6 +339,11 @@ class SpellingBee {
         dots.forEach((dot, index) => {
             dot.classList.toggle('active', index <= progress);
         });
+
+        // Show message if rank increased
+        if (currentRank !== previousRank && previousRank) {
+            this.showMessage(`🎉 New Rank: ${currentRank}!`, true);
+        }
     }
 
     toggleFoundWords() {
@@ -411,28 +460,125 @@ class SpellingBee {
         modalText.textContent = message;
         modalText.className = isPangram ? 'pangram' : '';
 
-        modal.style.display = 'block';
-        // Trigger reflow for animation
-        modal.offsetHeight;
-        modal.classList.add('show');
-
-        const close = document.querySelector('.close');
-        const hideModal = () => {
-            modal.classList.remove('show');
-            setTimeout(() => {
-                modal.style.display = 'none';
-            }, 300); // Match transition duration
-        };
-
-        close.onclick = hideModal;
-        window.onclick = (e) => {
-            if (e.target === modal) hideModal();
-        };
+        this.showModal(modal);
 
         // Auto-hide after 2 seconds for game messages
         if (!isPangram && message !== this.getRules()) {
-            setTimeout(hideModal, 2000);
+            setTimeout(() => this.hideModal(modal), 2000);
         }
+    }
+
+    showModal(modal) {
+        modal.style.display = 'block';
+        modal.offsetHeight; // Trigger reflow for animation
+        modal.classList.add('show');
+    }
+
+    hideModal(modal) {
+        modal.classList.remove('show');
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 300);
+    }
+
+    loadStats() {
+        const defaultStats = {
+            played: 0,
+            wins: 0,
+            currentStreak: 0,
+            maxStreak: 0,
+            rankDistribution: {
+                'BEGINNER': 0,
+                'GOOD START': 0,
+                'MOVING UP': 0,
+                'GOOD': 0,
+                'SOLID': 0,
+                'NICE': 0,
+                'GREAT': 0,
+                'AMAZING': 0,
+                'GENIUS': 0,
+                'QUEEN BEE': 0
+            },
+            lastPlayed: null
+        };
+
+        const savedStats = localStorage.getItem('spellingBeeStats');
+        return savedStats ? JSON.parse(savedStats) : defaultStats;
+    }
+
+    saveStats() {
+        localStorage.setItem('spellingBeeStats', JSON.stringify(this.stats));
+    }
+
+    updateStats() {
+        const today = new Date().toISOString().split('T')[0];
+
+        // Only update stats once per day
+        if (this.stats.lastPlayed === today) return;
+
+        this.stats.played++;
+        this.stats.lastPlayed = today;
+
+        // Update rank distribution
+        const currentRank = this.rankDisplay.textContent;
+        this.stats.rankDistribution[currentRank] = (this.stats.rankDistribution[currentRank] || 0) + 1;
+
+        // Update streaks
+        if (this.score > 0) {
+            this.stats.wins++;
+            this.stats.currentStreak++;
+            this.stats.maxStreak = Math.max(this.stats.maxStreak, this.stats.currentStreak);
+        } else {
+            this.stats.currentStreak = 0;
+        }
+
+        this.saveStats();
+    }
+
+    showStats() {
+        const statsModal = document.getElementById('stats-modal');
+
+        // Update stats display
+        document.getElementById('stats-played').textContent = this.stats.played;
+        document.getElementById('stats-win-rate').textContent =
+            this.stats.played > 0
+                ? Math.round((this.stats.wins / this.stats.played) * 100) + '%'
+                : '0%';
+        document.getElementById('stats-current-streak').textContent = this.stats.currentStreak;
+        document.getElementById('stats-max-streak').textContent = this.stats.maxStreak;
+
+        // Update rank distribution chart
+        const rankChart = document.getElementById('rank-chart');
+        rankChart.innerHTML = '';
+
+        const maxCount = Math.max(...Object.values(this.stats.rankDistribution));
+        Object.entries(this.stats.rankDistribution).forEach(([rank, count]) => {
+            const bar = document.createElement('div');
+            bar.className = 'chart-bar';
+
+            const label = document.createElement('div');
+            label.className = 'chart-label';
+            label.textContent = rank;
+
+            const fill = document.createElement('div');
+            fill.className = 'chart-fill';
+
+            const value = document.createElement('div');
+            value.className = 'chart-value';
+            value.style.width = maxCount > 0 ? `${(count / maxCount) * 100}%` : '0%';
+
+            const number = document.createElement('div');
+            number.className = 'chart-number';
+            number.textContent = count;
+
+            fill.appendChild(value);
+            bar.appendChild(label);
+            bar.appendChild(fill);
+            bar.appendChild(number);
+            rankChart.appendChild(bar);
+        });
+
+        this.showModal(statsModal);
     }
 
     getRules() {
@@ -487,34 +633,45 @@ Found ${this.foundWords.size} words`;
     }
 
     saveGameState() {
+        const today = new Date().toISOString().split('T')[0];
         const gameState = {
-            date: new Date().toISOString().split('T')[0],
+            date: today,
             score: this.score,
-            foundWords: Array.from(this.foundWords)
+            foundWords: Array.from(this.foundWords),
+            letters: this.letters,
+            centerLetter: this.centerLetter,
+            theme: this.theme
         };
         localStorage.setItem('spellingBeeState', JSON.stringify(gameState));
+        localStorage.setItem('lastPlayed', today);
+        this.updateStats();
     }
 
     loadGameState() {
         const savedState = localStorage.getItem('spellingBeeState');
         if (savedState) {
             const state = JSON.parse(savedState);
-            if (state.date === new Date().toISOString().split('T')[0]) {
-                this.score = state.score;
-                this.foundWords = new Set(state.foundWords);
-                this.scoreDisplay.textContent = this.score;
-                this.updateRank();
+            this.score = state.score;
+            this.foundWords = new Set(state.foundWords);
+            this.letters = state.letters;
+            this.centerLetter = state.centerLetter;
+            this.theme = state.theme || 'light';
 
-                // Clear existing words
-                this.wordsList.innerHTML = '';
-                this.mobileWordsList.innerHTML = '';
-                document.getElementById('word-count').textContent = '0';
-                this.wordsCountDesktop.textContent = '0';
+            // Update UI
+            this.scoreDisplay.textContent = this.score;
+            document.documentElement.setAttribute('data-theme', this.theme);
+            this.updateRank();
+            this.displayLetters();
 
-                // Add words in alphabetical order
-                const sortedWords = Array.from(this.foundWords).sort();
-                sortedWords.forEach(word => this.displayWord(word));
-            }
+            // Clear existing words
+            this.wordsList.innerHTML = '';
+            this.mobileWordsList.innerHTML = '';
+            document.getElementById('word-count').textContent = '0';
+            this.wordsCountDesktop.textContent = '0';
+
+            // Add words in alphabetical order
+            const sortedWords = Array.from(this.foundWords).sort();
+            sortedWords.forEach(word => this.displayWord(word));
         }
     }
 
@@ -528,6 +685,7 @@ Found ${this.foundWords.size} words`;
         document.getElementById('word-count').textContent = '0';
         this.wordsCountDesktop.textContent = '0';
         localStorage.removeItem('spellingBeeState');
+        localStorage.removeItem('lastPlayed');
     }
 }
 
