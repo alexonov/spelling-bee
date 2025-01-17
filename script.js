@@ -27,6 +27,9 @@ class SpellingBee {
         this.scoreDisplay = document.getElementById('current-score');
         this.rankDisplay = document.getElementById('current-rank');
         this.wordsList = document.getElementById('words-list');
+        this.mobileWordsList = document.getElementById('mobile-words-list');
+        this.mobileOverlay = document.querySelector('.mobile-overlay');
+        this.wordsCountDesktop = document.getElementById('words-count-desktop');
 
         // Buttons
         document.getElementById('delete-btn').addEventListener('click', () => this.deleteLetter());
@@ -34,6 +37,15 @@ class SpellingBee {
         document.getElementById('enter-btn').addEventListener('click', () => this.submitWord());
         document.getElementById('share-btn').addEventListener('click', () => this.shareProgress());
         document.getElementById('how-to-play').addEventListener('click', () => this.showRules());
+        document.getElementById('words-btn').addEventListener('click', () => this.toggleMobileWords());
+        document.querySelector('.close-words').addEventListener('click', () => this.toggleMobileWords());
+
+        // Close mobile overlay when clicking outside
+        this.mobileOverlay.addEventListener('click', (e) => {
+            if (e.target === this.mobileOverlay) {
+                this.toggleMobileWords();
+            }
+        });
 
         // Cell click handlers
         this.cells.forEach(cell => {
@@ -73,6 +85,11 @@ class SpellingBee {
             'SCORE', 'SCONE', 'CLOSE', 'CLONE', 'LOOSE', 'LOSER'
         ];
         this.dictionary = new Set(commonWords);
+    }
+
+    toggleMobileWords() {
+        this.mobileOverlay.classList.toggle('show');
+        document.body.style.overflow = this.mobileOverlay.classList.contains('show') ? 'hidden' : '';
     }
 
     initializeGame() {
@@ -240,17 +257,25 @@ class SpellingBee {
     }
 
     displayWord(word) {
-        const wordSpan = document.createElement('span');
-        wordSpan.textContent = word;
-        if (new Set([...word]).size === 7) {
-            wordSpan.classList.add('pangram');
-        }
-        this.wordsList.appendChild(wordSpan);
+        const createWordSpan = () => {
+            const span = document.createElement('span');
+            span.textContent = word;
+            if (new Set([...word]).size === 7) {
+                span.classList.add('pangram');
+            }
+            return span;
+        };
 
-        // Update word count
-        const wordCountSpan = document.getElementById('word-count');
-        const currentCount = parseInt(wordCountSpan.textContent);
-        wordCountSpan.textContent = currentCount + 1;
+        // Add to desktop list
+        this.wordsList.appendChild(createWordSpan());
+
+        // Add to mobile list
+        this.mobileWordsList.appendChild(createWordSpan());
+
+        // Update word counts
+        const count = this.foundWords.size;
+        document.getElementById('word-count').textContent = count;
+        this.wordsCountDesktop.textContent = count;
     }
 
     showMessage(message, isPangram = false) {
@@ -341,7 +366,9 @@ Found ${this.foundWords.size} words`;
 
                 // Clear existing words
                 this.wordsList.innerHTML = '';
+                this.mobileWordsList.innerHTML = '';
                 document.getElementById('word-count').textContent = '0';
+                this.wordsCountDesktop.textContent = '0';
 
                 // Add words in alphabetical order
                 const sortedWords = Array.from(this.foundWords).sort();
@@ -356,28 +383,10 @@ Found ${this.foundWords.size} words`;
         this.scoreDisplay.textContent = '0';
         this.updateRank();
         this.wordsList.innerHTML = '';
+        this.mobileWordsList.innerHTML = '';
         document.getElementById('word-count').textContent = '0';
+        this.wordsCountDesktop.textContent = '0';
         localStorage.removeItem('spellingBeeState');
-    }
-
-    initializeGame() {
-        // Check if it's a new day
-        const today = new Date().toISOString().split('T')[0];
-        const lastPlayed = localStorage.getItem('lastPlayedDate');
-
-        if (lastPlayed !== today) {
-            this.clearGameState();
-            localStorage.setItem('lastPlayedDate', today);
-        }
-
-        // Generate today's letters based on date
-        const seed = this.hashCode(today);
-        this.letters = this.generateLetters(seed);
-        this.centerLetter = this.letters[0];
-        this.letters = this.letters.slice(1);
-
-        // Display letters
-        this.displayLetters();
     }
 }
 

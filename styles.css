@@ -13,36 +13,116 @@ body {
 .container {
     max-width: 800px;
     margin: 0 auto;
-    padding: 20px;
+    padding: 15px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
-header {
+.game-header {
+    padding: 10px 0;
+    margin-bottom: 20px;
+}
+
+.rank-progress {
     text-align: center;
-    margin-bottom: 30px;
 }
 
-.score-container {
+.rank {
     display: flex;
     justify-content: center;
-    gap: 20px;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+}
+
+.progress-dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
     margin-top: 10px;
-    font-size: 1.2em;
 }
 
-.game-container {
-    display: grid;
-    grid-template-columns: minmax(auto, 600px) 300px;
-    gap: 30px;
-    max-width: 1000px;
-    margin: 0 auto;
-    align-items: start;
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #e0e0e0;
 }
 
-.game-left {
+.dot.active {
+    background: #f7da21;
+}
+
+#words-btn {
+    display: none;
+    width: 100%;
+    padding: 12px;
+    margin-top: 15px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: #fff;
+    font-size: 1em;
+    color: #333;
+}
+
+.game-main {
+    flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 30px;
+    margin-bottom: 20px;
+}
+
+.desktop-only {
+    display: none;
+}
+
+.mobile-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+}
+
+.mobile-words {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-radius: 12px 12px 0 0;
+    padding: 20px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.mobile-words-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.close-words {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #666;
+    padding: 5px;
+}
+
+.game-footer {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    padding: 15px 0;
 }
 
 .hive {
@@ -401,56 +481,95 @@ button:hover {
 }
 
 @media (max-width: 768px) {
-    .container {
-        padding: 15px;
+    .mobile-only {
+        display: block;
     }
 
-    .game-container {
-        grid-template-columns: 1fr;
-        gap: 20px;
-    }
-
-    .game-left {
-        order: 1;
-    }
-
-    .found-words {
-        order: 2;
-        height: auto;
-        max-height: 300px;
+    .desktop-only {
+        display: none;
     }
 
     .hive {
         transform: scale(0.9);
-        margin: 20px auto;
     }
 
     .button-container {
-        flex-wrap: wrap;
-        gap: 8px;
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        gap: 10px;
+        width: 100%;
+        max-width: 400px;
     }
 
-    button {
-        flex: 1;
-        min-width: 100px;
+    #shuffle-btn {
+        width: 48px;
+        height: 48px;
         padding: 12px;
-        font-size: 0.85em;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #shuffle-btn svg {
+        width: 24px;
+        height: 24px;
     }
 
     .current-word {
         font-size: 1.6em;
-        margin: 12px 0;
         min-height: 45px;
+        margin: 10px 0;
     }
 
-    .score-container {
-        font-size: 1.1em;
-        gap: 15px;
+    .mobile-overlay.show {
+        display: block;
+    }
+
+    .mobile-words {
+        transform: translateY(100%);
+        transition: transform 0.3s ease-out;
+    }
+
+    .mobile-overlay.show .mobile-words {
+        transform: translateY(0);
+    }
+}
+
+@media (min-width: 769px) {
+    .container {
+        padding: 20px;
+        display: grid;
+        grid-template-columns: minmax(auto, 600px) 300px;
+        gap: 30px;
+        align-items: start;
+    }
+
+    .game-main {
+        grid-column: 1;
+    }
+
+    .found-words {
+        grid-column: 2;
+        grid-row: 1 / span 2;
+    }
+
+    .game-footer {
+        grid-column: 1;
     }
 }
 
 @media (max-width: 360px) {
     .hive {
-        transform: scale(0.8);
+        transform: scale(0.85);
+    }
+
+    .button-container {
+        gap: 8px;
+    }
+
+    #shuffle-btn {
+        width: 44px;
+        height: 44px;
     }
 }
