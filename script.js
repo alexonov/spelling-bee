@@ -110,24 +110,21 @@ class SpellingBee {
         });
     }
 
-    loadDictionary() {
-        const xhr = new XMLHttpRequest();
-        xhr.open('GET', 'enable1.txt', false); // false = synchronous
+    async loadDictionary() {
         try {
-            xhr.send();
-            if (xhr.status === 200 || xhr.status === 0) {
-                // Split on newlines and convert to uppercase
-                this.dictionary = new Set(
-                    xhr.responseText.split(/\r?\n/)
-                        .map(word => word.trim().toUpperCase())
-                        .filter(word => word.length > 0)
-                );
+            const response = await fetch('https://raw.githubusercontent.com/alexonov/spelling-bee/main/enable1.txt');
+            const text = await response.text();
+            const words = text.split(/\r?\n/);
+            for (const word of words) {
+                const cleanWord = word.trim().toUpperCase();
+                if (cleanWord.length > 0) {
+                    this.dictionary.add(cleanWord);
+                }
             }
         } catch (error) {
             console.error('Error loading dictionary:', error);
             this.dictionary = new Set();
         }
-        return Promise.resolve();
     }
 
     toggleMobileWords() {
