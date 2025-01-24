@@ -121,6 +121,7 @@ class SpellingBee {
                     this.dictionary.add(cleanWord);
                 }
             }
+            console.log('Dictionary loaded with', this.dictionary.size, 'words');
         } catch (error) {
             console.error('Error loading dictionary:', error);
             this.dictionary = new Set();
@@ -156,75 +157,31 @@ class SpellingBee {
     }
 
     generateLetters(seed) {
-        // Letter frequencies (normalized and adjusted for better gameplay)
-        const letterFreq = {
-            'A': 8.2, 'B': 1.5, 'C': 2.8, 'D': 4.3, 'E': 12.7,
-            'F': 2.2, 'G': 2.0, 'H': 6.1, 'I': 7.0, 'J': 0.15,
-            'K': 0.77, 'L': 4.0, 'M': 2.4, 'N': 6.7, 'O': 7.5,
-            'P': 1.9, 'Q': 0.095, 'R': 6.0, 'S': 6.3, 'T': 9.1,
-            'U': 2.8, 'V': 0.98, 'W': 2.4, 'X': 0.15, 'Y': 2.0,
-            'Z': 0.074
-        };
-
         // Seeded random function
         const random = () => {
             seed = (seed * 9301 + 49297) % 233280;
             return seed / 233280;
         };
 
-        // Helper function for weighted random selection
-        const weightedRandom = (weights) => {
-            const totalWeight = Object.values(weights).reduce((a, b) => a + b, 0);
-            let r = random() * totalWeight;
+        // Find all pangrams in the dictionary
+        const pangrams = Array.from(this.dictionary).filter(word => {
+            const uniqueLetters = new Set(word.split(''));
+            return uniqueLetters.size === 7;
+        });
 
-            for (const [item, weight] of Object.entries(weights)) {
-                r -= weight;
-                if (r <= 0) return item;
-            }
-            return Object.keys(weights)[0];
-        };
+        // Select a random pangram using the seed
+        const selectedPangram = pangrams[Math.floor(random() * pangrams.length)];
 
-        // First, select exactly 2 vowels
-        const vowels = ['A', 'E', 'I', 'O', 'U'];
-        const selectedVowels = new Set();
-        const vowelWeights = {};
-        vowels.forEach(v => vowelWeights[v] = letterFreq[v]);
-
-        while (selectedVowels.size < 2) {
-            const vowel = weightedRandom(vowelWeights);
-            selectedVowels.add(vowel);
-            delete vowelWeights[vowel];
-        }
-
-        // Then select 5 consonants
-        const consonantWeights = { ...letterFreq };
-        vowels.forEach(v => delete consonantWeights[v]);
-
-        // Adjust weights to give rare letters a better chance
-        // Boost rare letters (below 2% frequency) by multiplying their weight
-        for (const [letter, freq] of Object.entries(consonantWeights)) {
-            if (freq < 2) {
-                consonantWeights[letter] = freq * 3; // Triple the chance for rare letters
-            }
-        }
-
-        const selectedConsonants = new Set();
-        while (selectedConsonants.size < 5) {
-            const consonant = weightedRandom(consonantWeights);
-            selectedConsonants.add(consonant);
-            delete consonantWeights[consonant];
-        }
-
-        // Combine and shuffle all selected letters
-        const allLetters = [...selectedVowels, ...selectedConsonants];
+        // Get unique letters from the pangram
+        const letters = Array.from(new Set(selectedPangram.split('')));
 
         // Fisher-Yates shuffle with seeded random
-        for (let i = allLetters.length - 1; i > 0; i--) {
+        for (let i = letters.length - 1; i > 0; i--) {
             const j = Math.floor(random() * (i + 1));
-            [allLetters[i], allLetters[j]] = [allLetters[j], allLetters[i]];
+            [letters[i], letters[j]] = [letters[j], letters[i]];
         }
 
-        return allLetters;
+        return letters;
     }
 
     toggleTheme() {

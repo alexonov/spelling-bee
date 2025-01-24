@@ -309,24 +309,10 @@ body {
     font-size: 1.7em;
     font-weight: bold;
     cursor: pointer;
-    transition: all 0.15s ease-out;
-    user-select: none;
-    transform-origin: center;
     clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
     background: var(--cell-bg);
     border: none;
-    box-shadow:
-        0 2px 4px var(--cell-shadow),
-        inset 0 0 0 1px var(--cell-border);
-}
-
-.cell::before {
-    content: '';
-    position: absolute;
-    inset: 2px;
-    background: inherit;
-    clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
-    z-index: -1;
+    transition: background-color 0.1s;
 }
 
 /* Cell positions */
@@ -334,10 +320,12 @@ body {
     transform: translate(-50%, -50%);
     background: var(--accent-color);
     color: #000 !important;
-    box-shadow:
-        0 0 20px var(--accent-glow),
-        inset 0 0 0 1px var(--cell-border);
     z-index: 1;
+    box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.cell:active {
+    background: var(--cell-hover-bg);
 }
 
 .cell[data-position="top"] {
@@ -364,69 +352,9 @@ body {
     transform: translate(calc(-50% - 70px), calc(-50% - 36px));
 }
 
-/* Cell hover states */
-.cell[data-position="center"]:hover {
-    transform: translate(-50%, -50%) scale(1.08);
-}
-
-.cell[data-position="top"]:hover {
-    transform: translate(-50%, calc(-50% - 72px)) scale(1.08);
-}
-
-.cell[data-position="top-right"]:hover {
-    transform: translate(calc(-50% + 70px), calc(-50% - 36px)) scale(1.08);
-}
-
-.cell[data-position="bottom-right"]:hover {
-    transform: translate(calc(-50% + 70px), calc(-50% + 36px)) scale(1.08);
-}
-
-.cell[data-position="bottom"]:hover {
-    transform: translate(-50%, calc(-50% + 72px)) scale(1.08);
-}
-
-.cell[data-position="bottom-left"]:hover {
-    transform: translate(calc(-50% - 70px), calc(-50% + 36px)) scale(1.08);
-}
-
-.cell[data-position="top-left"]:hover {
-    transform: translate(calc(-50% - 70px), calc(-50% - 36px)) scale(1.08);
-}
-
-/* Cell active states */
-.cell[data-position="center"]:active {
-    transform: translate(-50%, -50%) scale(0.95);
-}
-
-.cell[data-position="top"]:active {
-    transform: translate(-50%, calc(-50% - 72px)) scale(0.95);
-}
-
-.cell[data-position="top-right"]:active {
-    transform: translate(calc(-50% + 70px), calc(-50% - 36px)) scale(0.95);
-}
-
-.cell[data-position="bottom-right"]:active {
-    transform: translate(calc(-50% + 70px), calc(-50% + 36px)) scale(0.95);
-}
-
-.cell[data-position="bottom"]:active {
-    transform: translate(-50%, calc(-50% + 72px)) scale(0.95);
-}
-
-.cell[data-position="bottom-left"]:active {
-    transform: translate(calc(-50% - 70px), calc(-50% + 36px)) scale(0.95);
-}
-
-.cell[data-position="top-left"]:active {
-    transform: translate(calc(-50% - 70px), calc(-50% - 36px)) scale(0.95);
-}
-
 /* Cell hover effects */
-.cell:hover {
-    box-shadow:
-        0 4px 8px var(--cell-shadow),
-        inset 0 0 0 1px var(--cell-border);
+.cell:not([data-position="center"]):hover {
+    background: var(--cell-hover-bg);
 }
 
 .cell:not([data-position="center"]) {
@@ -715,7 +643,6 @@ button:hover {
     }
 
     .hive {
-        transform: scale(0.85);
         height: 260px;
         margin: 10px auto;
     }
